@@ -1,102 +1,87 @@
-pragma solidity ^0.5.7;
+// SPDX-License-Identifier: MIT
+// Omirtay Contracts (mytoken/ERC20Standard.sol)
+pragma solidity ^0.5.0;
 
-library SafeMath {
+contract ERC20Interface {
+    function totalSupply() public view returns (uint);
+    function balanceOf(address tokenOwner) public view returns (uint balance);
+    function allowance(address tokenOwner, address spender) public view returns (uint remaining);
+    function transfer(address to, uint tokens) public returns (bool success);
+    function approve(address spender, uint tokens) public returns (bool success);
+    function transferFrom(address from, address to, uint tokens) public returns (bool success);
 
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
+    event Transfer(address indexed from, address indexed to, uint tokens);
+    event Approval(address indexed tokenOwner, address indexed spender, uint tokens);
+}
 
-        uint256 c = a * b;
-        require(c / a == b);
 
-        return c;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b > 0);
-        uint256 c = a / b;
-        
-	return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b <= a);
-        uint256 c = a - b;
-
-        return c;
-    }
-
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
+contract SafeMath {
+    function safeAdd(uint a, uint b) public pure returns (uint c) {
+        c = a + b;
         require(c >= a);
-
-        return c;
     }
-
-    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b != 0);
-        return a % b;
+    function safeSub(uint a, uint b) public pure returns (uint c) {
+        require(b <= a); c = a - b; } function safeMul(uint a, uint b) public pure returns (uint c) { c = a * b; require(a == 0 || c / a == b); } function safeDiv(uint a, uint b) public pure returns (uint c) { require(b > 0);
+        c = a / b;
     }
 }
 
-contract ERC20Standard {
-	using SafeMath for uint256;
-	uint public totalSupply;
-	
-	string public name;
-	uint8 public decimals;
-	string public symbol;
-	string public version;
-	
-	mapping (address => uint256) balances;
-	mapping (address => mapping (address => uint)) allowed;
 
-	//Fix for short address attack against ERC20
-	modifier onlyPayloadSize(uint size) {
-		assert(msg.data.length == size + 4);
-		_;
-	} 
+contract CodeWithJoe is ERC20Interface, SafeMath {
+    string public name;
+    string public symbol;
+    uint8 public decimals; // 18 decimals is the strongly suggested default, avoid changing it
 
-	function balanceOf(address _owner) public view returns (uint balance) {
-		return balances[_owner];
-	}
+    uint256 public _totalSupply;
 
-	function transfer(address _recipient, uint _value) public onlyPayloadSize(2*32) {
-	    require(balances[msg.sender] >= _value && _value > 0);
-	    balances[msg.sender] = balances[msg.sender].sub(_value);
-	    balances[_recipient] = balances[_recipient].add(_value);
-	    emit Transfer(msg.sender, _recipient, _value);        
-        }
+    mapping(address => uint) balances;
+    mapping(address => mapping(address => uint)) allowed;
 
-	function transferFrom(address _from, address _to, uint _value) public {
-	    require(balances[_from] >= _value && allowed[_from][msg.sender] >= _value && _value > 0);
-            balances[_to] = balances[_to].add(_value);
-            balances[_from] = balances[_from].sub(_value);
-            allowed[_from][msg.sender] = allowed[_from][msg.sender].sub(_value);
-            emit Transfer(_from, _to, _value);
-        }
+    /**
+     * Constrctor function
+     *
+     * Initializes contract with initial supply tokens to the creator of the contract
+     */
+    constructor() public {
+        name = "My New Token";
+        symbol = "MNT";
+        decimals = 18;
+        _totalSupply = 120000;
 
-	function  approve(address _spender, uint _value) public {
-		allowed[msg.sender][_spender] = _value;
-		emit Approval(msg.sender, _spender, _value);
-	}
+        balances[msg.sender] = _totalSupply;
+        emit Transfer(address(0), msg.sender, _totalSupply);
+    }
 
-	function allowance(address _spender, address _owner) public view returns (uint balance) {
-		return allowed[_owner][_spender];
-	}
+    function totalSupply() public view returns (uint) {
+        return _totalSupply  - balances[address(0)];
+    }
 
-	//Event which is triggered to log all transfers to this contract's event log
-	event Transfer(
-		address indexed _from,
-		address indexed _to,
-		uint _value
-		);
-		
-	//Event which is triggered whenever an owner approves a new allowance for a spender.
-	event Approval(
-		address indexed _owner,
-		address indexed _spender,
-		uint _value
-		);
+    function balanceOf(address tokenOwner) public view returns (uint balance) {
+        return balances[tokenOwner];
+    }
+
+    function allowance(address tokenOwner, address spender) public view returns (uint remaining) {
+        return allowed[tokenOwner][spender];
+    }
+
+    function approve(address spender, uint tokens) public returns (bool success) {
+        allowed[msg.sender][spender] = tokens;
+        emit Approval(msg.sender, spender, tokens);
+        return true;
+    }
+
+    function transfer(address to, uint tokens) public returns (bool success) {
+        balances[msg.sender] = safeSub(balances[msg.sender], tokens);
+        balances[to] = safeAdd(balances[to], tokens);
+        emit Transfer(msg.sender, to, tokens);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint tokens) public returns (bool success) {
+        balances[from] = safeSub(balances[from], tokens);
+        allowed[from][msg.sender] = safeSub(allowed[from][msg.sender], tokens);
+        balances[to] = safeAdd(balances[to], tokens);
+        emit Transfer(from, to, tokens);
+        return true;
+    }
 }
