@@ -45,7 +45,7 @@ contract Omirtay is ERC20Interface, SafeMath {
     constructor() public {
         name = "My New Token";
         symbol = "MNT";
-        decimals = 18;
+        decimals = 4;
         _totalSupply = 120000;
 
         balances[msg.sender] = _totalSupply;
